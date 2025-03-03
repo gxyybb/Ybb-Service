@@ -9,5 +9,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 * @createDate 2025-03-01 20:02:35
 */
 public interface UsersService extends IService<Users> {
-
+    /**
+     * 用户登录方法
+     * @param username 用户名
+     * @param password 密码
+     * @return 是否登录成功
+     */
+    boolean login(String username, String password);
+    String generateToken(String username);
+    boolean register(String username, String password) ;
 }
