@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.ybb.mapper.WordGroupDateGroupMapper">
+
+    <resultMap id="BaseResultMap" type="org.example.ybb.domain.WordGroupDateGroup">
+            <id property="wordGroupId" column="word_group_id" jdbcType="INTEGER"/>
+            <id property="dateGroupId" column="date_group_id" jdbcType="INTEGER"/>
+            <result property="completionStatus" column="completion_status" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        word_group_id,date_group_id,completion_status
+    </sql>
+</mapper>
