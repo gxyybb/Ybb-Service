@@ -9,7 +9,5 @@
             <result property="wordId" column="word_id" jdbcType="INTEGER"/>
     </resultMap>
 
-    <sql id="Base_Column_List">
-        subject_id,word_id
-    </sql>
+
 </mapper>

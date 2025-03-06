@@ -4,20 +4,6 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.example.ybb.mapper.WordMapper">
 
-    <resultMap id="BaseResultMap" type="org.example.ybb.domain.Word">
-            <id property="id" column="id" jdbcType="INTEGER"/>
-            <result property="word" column="word" jdbcType="VARCHAR"/>
-            <result property="isNewWord" column="is_new_word" jdbcType="TINYINT"/>
-            <result property="isFamiliarWord" column="is_familiar_word" jdbcType="TINYINT"/>
-            <result property="pronunciation" column="pronunciation" jdbcType="VARCHAR"/>
-            <result property="meaning" column="meaning" jdbcType="VARCHAR"/>
-            <result property="wordType" column="word_type" jdbcType="VARCHAR"/>
-            <result property="audioPath" column="audio_path" jdbcType="VARCHAR"/>
-    </resultMap>
 
-    <sql id="Base_Column_List">
-        id,word,is_new_word,
-        is_familiar_word,pronunciation,meaning,
-        word_type,audio_path
-    </sql>
+
 </mapper>

@@ -2,6 +2,10 @@ package org.example.ybb.service;
 
 import org.example.ybb.domain.Subject;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.example.ybb.domain.Word;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.List;
 
 /**
 * @author 14847
@@ -10,4 +14,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 */
 public interface SubjectService extends IService<Subject> {
 
+
+    public List<Word> getWordsBySubject(Integer subjectId);
 }

@@ -19,9 +19,9 @@ public class UserController {
 
     @PostMapping("/login")
     public ResultVO<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        boolean isSuccess = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
-        if (isSuccess) {
-            String token = userService.generateToken(loginRequest.getUsername());
+        Integer userId = userService.login(loginRequest.getUsername(), loginRequest.getPassword());
+        if (userId != 0) {
+            String token = userService.generateToken(userId);
             return ResultVO.success(new LoginResponse("Login successful", token));
         }
         return ResultVO.error("Invalid username or password");

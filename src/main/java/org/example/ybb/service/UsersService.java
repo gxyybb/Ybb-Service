@@ -15,7 +15,7 @@ public interface UsersService extends IService<Users> {
      * @param password 密码
      * @return 是否登录成功
      */
-    boolean login(String username, String password);
-    String generateToken(String username);
+    Integer login(String username, String password);
+    String generateToken(Integer userId);
     boolean register(String username, String password) ;
 }
