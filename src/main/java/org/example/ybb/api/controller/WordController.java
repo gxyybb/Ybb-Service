@@ -121,10 +121,10 @@ public class WordController {
 
         return ResultVO.success();
     }
-
+    //获取计划
     @GetMapping("/getPlan")
     public ResultVO<List<Plan>> getPlanList(String token, Integer subjectId) {
-
+        return ResultVO.success();
     }
 
     @GetMapping("/getPlanList")
