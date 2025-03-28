@@ -64,7 +64,7 @@ public class TokenUtil {
             return null;
         }
     }
-
+    // 检查用户 ID 是否为预期的管理员 ID
     public static boolean verifyToken(String token) {
         // 从 token 中解析用户 ID
         Optional<Integer> userIdFromToken = Optional.ofNullable(getUserIdFromToken(token));
@@ -72,7 +72,7 @@ public class TokenUtil {
         // 获取用户 ID 或提供一个默认值
         Integer userId = userIdFromToken.orElse(-1);
 
-        // 检查用户 ID 是否为预期的管理员 ID
+
         return userId.equals(123456789);
     }
 }
