@@ -7,4 +7,5 @@ public class Plan {
     private Subject subject;
     private Integer totalDays;
     private Integer completeDays;
+    private Integer countByDay;
 }

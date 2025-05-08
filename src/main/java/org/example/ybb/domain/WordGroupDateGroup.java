@@ -26,6 +26,9 @@ public class WordGroupDateGroup implements Serializable {
 
     private Integer dateGroupId;
 
+    private Integer subjectId;
+    private Integer userId;
+
     /**
      * 
      */

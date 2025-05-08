@@ -1,6 +1,7 @@
 package org.example.ybb.api.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import jakarta.validation.constraints.Null;
 import org.example.ybb.api.Plan;
 import org.example.ybb.api.PlanEntity;
@@ -10,6 +11,8 @@ import org.example.ybb.common.vo.ResultVO;
 import org.example.ybb.domain.*;
 import org.example.ybb.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -74,6 +77,10 @@ public class WordController {
         wordGroupqueryWrapper.eq("user_id",userIdFromToken);
         wordGroupqueryWrapper.eq("subject_id",subjectId);
         wordGroupService.remove(wordGroupqueryWrapper);
+        QueryWrapper<WordGroupDateGroup> wordGroupDateGroupQueryWrapper = new QueryWrapper<>();
+        wordGroupDateGroupQueryWrapper.eq("subject_id",subjectId);
+        wordGroupDateGroupQueryWrapper.eq("user_id",userIdFromToken);
+        wordGroupDateGroupService.remove(wordGroupDateGroupQueryWrapper);
         return ResultVO.success();
 
     }
@@ -99,11 +106,13 @@ public class WordController {
                 wordGroup.setSubjectId(subject);
                 wordGroup.setNumber(i+1);
                 wordGroupService.save(wordGroup);
-                Integer wordGroupId = wordGroup.getId(); // 这里拿到保存后的 ID
-                wordGroupIds.add(wordGroupId);
+                wordGroupIds.add(i+1);
             }
-
         }
+        Set<Integer> uniqueSet = new HashSet<>(wordGroupIds);
+
+        wordGroupIds = new ArrayList<>(uniqueSet);
+        System.out.println(wordGroupIds);
         List<List<Integer>> planForDays = EbbinghausStudyPlan.generateStudyPlan(wordGroupIds);
         int days = planForDays.size();
         List<Integer> daysIds = generateDays(days, userId,subject);
@@ -113,6 +122,8 @@ public class WordController {
                 WordGroupDateGroup wordGroupDateGroup = new WordGroupDateGroup();
                 wordGroupDateGroup.setWordGroupId(wordGroupId);
                 wordGroupDateGroup.setDateGroupId(daysIds.get(i));
+                wordGroupDateGroup.setSubjectId(subject);
+                wordGroupDateGroup.setUserId(userId);
                 wordGroupDateGroup.setCompletionStatus(0);
                 wordGroupDateGroupService.save(wordGroupDateGroup);
             }
@@ -121,13 +132,45 @@ public class WordController {
 
         return ResultVO.success();
     }
-    //获取计划
-    @GetMapping("/getPlan")
-    public ResultVO<List<Plan>> getPlanList(String token, Integer subjectId) {
-        return ResultVO.success();
+    //获取计划内容 1
+    @GetMapping("/getDateGroupIdByUser")
+    public ResultVO<List<DateGroup>> getPlanList(String token, Integer subjectId) {
+        QueryWrapper<DateGroup> dateGroupQueryWrapper = new QueryWrapper<>();
+        dateGroupQueryWrapper.eq("user_id",TokenUtil.getUserIdFromToken(token));
+        dateGroupQueryWrapper.eq("subject_id",subjectId);
+        List<DateGroup> list = dateGroupService.list(dateGroupQueryWrapper);
+        list.sort(Comparator.comparingInt(DateGroup::getDate));
+        //获取日期
+        Optional<DateGroup> maxDateGroup = list.stream()
+                .filter(dateGroup -> dateGroup.getCompletionStatus() == 1) // 过滤completionStatus = 1
+                .max(Comparator.comparingInt(DateGroup::getDate)); // 按date从大到小排序并取最大值
+
+        return ResultVO.success(list);
+    }
+    //2
+    @GetMapping("/getWordDateByDateGroupId")
+    public ResultVO<List<WordGroupDateGroup>> getWordDate(Integer dateGroupId) {
+        QueryWrapper<WordGroupDateGroup> wordGroupDateGroupQueryWrapper = new QueryWrapper<>();
+        wordGroupDateGroupQueryWrapper.eq("date_group_id",dateGroupId);
+        List<WordGroupDateGroup> list = wordGroupDateGroupService.list(wordGroupDateGroupQueryWrapper);
+        return ResultVO.success(list);
+    }
+    //3
+    @GetMapping("/getWordByWordDate")
+    public ResultVO<List<Word>> getWord(String token, Integer subjectId,Integer wordGroupId) {
+        QueryWrapper<WordGroup> wordGroupQueryWrapper = new QueryWrapper<>();
+        wordGroupQueryWrapper.eq("user_id",TokenUtil.getUserIdFromToken(token));
+        wordGroupQueryWrapper.eq("subject_id",subjectId);
+        wordGroupQueryWrapper.eq("number",wordGroupId);
+        List<Word> list1 = wordGroupService.list(wordGroupQueryWrapper).stream().map(WordGroup::getWordId).map(wordId ->
+                wordService.getById(wordId)
+        ).toList();
+        return ResultVO.success(list1);
     }
 
+
     @GetMapping("/getPlanList")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ResultVO<List<Plan>> getPlanList(String token) {
         Integer userIdFromToken = TokenUtil.getUserIdFromToken(token);
 
@@ -173,19 +216,71 @@ public class WordController {
             maxIncompleteDateMap.put(subjectId, maxIncompleteDate);
         }
 
+        List<Map<String, Object>> wordGroupCounts = wordGroupService.listMaps(new QueryWrapper<WordGroup>()
+                .select("subject_id", "number", "COUNT(*) as cnt")
+                .eq("user_id", userIdFromToken)
+                .groupBy("subject_id", "number")
+        );
+
+        // 构建 subjectId -> maxCountByDay 的映射
+        Map<Integer, Integer> countByDayMap = new HashMap<>();
+        for (Map<String, Object> row : wordGroupCounts) {
+            Integer subjectId = (Integer) row.get("subject_id");
+            Long cnt = (Long) row.get("cnt");
+
+            countByDayMap.merge(subjectId, cnt.intValue(), Math::max); // 保留最大值
+        }
+
         // 组装 Plan 数据
         List<Plan> planList = subjectIds.stream()
                 .map(subjectId -> {
                     Plan plan = new Plan();
                     plan.setSubject(subjectMap.get(subjectId));
-                    plan.setTotalDays(maxDateMap.getOrDefault(subjectId, 0)); // 最大 date
-                    plan.setCompleteDays(maxIncompleteDateMap.getOrDefault(subjectId, -1)); // 未完成的最大 date，默认 -1
+                    plan.setTotalDays(maxDateMap.getOrDefault(subjectId, 0));
+                    plan.setCompleteDays(maxIncompleteDateMap.getOrDefault(subjectId, 0));
+                    plan.setCountByDay(countByDayMap.getOrDefault(subjectId, 0)); // ⭐ 设置 countByDay
                     return plan;
                 })
                 .collect(Collectors.toList());
 
         return ResultVO.success(planList);
     }
+
+    @GetMapping("/studyPlan")
+    public ResultVO<List<WordGroupDateGroup>> studyPlan(Integer subjectId,String token) {
+       return ResultVO.success(wordGroupDateGroupService.studyPlan(subjectId,TokenUtil.getUserIdFromToken(token)));
+    }
+
+    @PostMapping("/completeList")
+    public ResultVO<Boolean> completeList(@RequestBody WordGroupDateGroup wordGroupDateGroup,@RequestParam(required = false)Boolean isAllComplete ) {
+        // 设置完成状态为1
+        wordGroupDateGroup.setCompletionStatus(1);
+
+        // 构造更新条件
+        UpdateWrapper<WordGroupDateGroup> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("user_id", wordGroupDateGroup.getUserId());
+        updateWrapper.eq("subject_id", wordGroupDateGroup.getSubjectId());
+        updateWrapper.eq("word_group_id", wordGroupDateGroup.getWordGroupId());
+        updateWrapper.eq("date_group_id", wordGroupDateGroup.getDateGroupId());
+
+        // 执行更新
+        boolean updateSuccess = wordGroupDateGroupService.update(wordGroupDateGroup, updateWrapper);
+        if (isAllComplete) {
+            UpdateWrapper<DateGroup> updateWrapper1 = new UpdateWrapper<>();
+            updateWrapper1.eq("id", wordGroupDateGroup.getDateGroupId());
+
+            DateGroup dateGroup = new DateGroup();
+            dateGroup.setCompletionStatus(1);
+
+            dateGroupService.update(dateGroup, updateWrapper1);
+        }
+
+
+        // 返回统一封装结果
+        return ResultVO.success(updateSuccess);
+    }
+
+
 
 
 
@@ -203,6 +298,7 @@ public class WordController {
         }
         return daysIds;
     }
+
 
 
     private List<List<Word>> partitionList(List<Word> originalList, int number) {

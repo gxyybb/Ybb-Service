@@ -1,8 +1,11 @@
 package org.example.ybb.service;
 
+import org.apache.ibatis.annotations.Param;
 import org.example.ybb.domain.WordGroupDateGroup;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
 * @author 14847
@@ -11,5 +14,5 @@ import org.springframework.stereotype.Service;
 */
 @Service
 public interface WordGroupDateGroupService extends IService<WordGroupDateGroup> {
-
+    List<WordGroupDateGroup> studyPlan( Integer subjectId, Integer userId);
 }
