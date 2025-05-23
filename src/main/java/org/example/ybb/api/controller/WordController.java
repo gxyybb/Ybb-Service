@@ -193,7 +193,9 @@ public class WordController {
         Set<Integer> subjectIds = latestDates.stream()
                 .map(map -> (Integer) map.get("subject_id"))
                 .collect(Collectors.toSet());
-
+        if (subjectIds.isEmpty()) {
+            return ResultVO.success(); // 直接返回空结果，不执行SQL
+        }
         // 查询 Subject 表，获取 subject 详情
         List<Subject> subjects = subjectService.list(new QueryWrapper<Subject>().in("id", subjectIds));
 
